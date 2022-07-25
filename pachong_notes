@@ -1,0 +1,326 @@
+# 常用请求头信息：
+# - User-Agent：请求载体的身份标识
+# - Connection：请求完毕后，是断开连接还是保持连接
+# 常用相应头信息：
+# - Content-Type：服务器响应回客户端的数据类型
+# https协议：（对比http）
+# -安全的超文本传输协议
+# 加密方式：
+# - 对称密钥加密
+# - 非对称密钥加密
+# - 证书密钥加密（https采用的就是这种加密方式）
+
+# requests模块： python中原生的一款基于网络请求的模块，功能强大，简单便捷，效率高
+# 作用：模拟浏览器发请求
+# request请求 .text返回的是字符串形式数据； .content返回时二进制形式数据
+
+fp = open('test.html', 'r', encoding='utf-8')
+soup = bs4.BeautifulSoup(fp, 'lxml')
+# 提供的用于数据解析的方法和属性
+soup.tagname: 返回的时文档中第一次出现的tagName对应的标签
+soup.find('tagName'): 等同于soup.tagName 第一次出现的标签
+soup.find('span',{'class': 'price_down'}): 获取带有属性条件的标签 或者: soup.find('span',class='price_down')
+soup.find_all('tagName'): 返回的时文档中出现的所有tagName对应的标签
+# select：
+soup.select('id/class/tagName') 返回的是一个列表
+层级选择器
+soup.select('.tagName_a > tagName_b > tagName_c'): > 表示的是直接包含的层级
+soup.select('.tagName_a > tagName_b tagName_c'): 空格表示tagName_b跨多个层级的标签tagName_c
+# 获取标签之间的文本shuju
+soup.tagName.text/string/get_text()
+text/get_text(): 可以获取标签中 所有的文本内容
+string: 只可以获取标签中 直系的文本内容
+# 获取标签中属性值
+soup.tagName['class']
+
+xpath解析：最常用最便捷高效的一种解析方式，通用性
+- xpath：
+1、实例化一个etree对象，且需要将被解析的页面源码加载到该对象中
+2、调用etree对象中的xpath方法结合着xpath表达式实现标签的定位和内容的捕获
+- pip install lxml
+-方法
+etree.parse(filePath)
+etree.HTML('page_text')
+-xpath('xpath表达式')
+ '/'表示从根节点开始定位，表示依次包含的层级
+ '//'表示跨多个层级
+ 属性定位： //tagName[@attrName='attrValue']
+ 索引定位： //tagName_A[@attrName='attrValue']/tagName_B[index]
+ 提取直系文本：/text()
+ 提取跨层级文本：//text()
+ 取属性值：/@attrName
+ './': 代表从当前解析的标签开始
+ '|': 标签定位 或. xpath('A | B')
+
+验证码是一种反爬机制
+- 人工肉眼识别（不推荐）
+- 第三方自动识别（推荐）
+  云打码：http://www.yundama.com/demo.html
+
+模拟登录
+- 点击登录按钮之后回发起一个post请求
+- post请求中回携带登录之前录入的相关登录信息（用户名，密码，验证码……）
+
+http/https协议特性：无状态
+ 发起第二次请求，服务器端并不知道该请求时基于登录状态下的请求
+ cookie：用来让服务器端保留记录客户端相关状态
+ 处理方式：
+ 1、手动处理：通过抓包工具获取cookie值，将该值封装到headers中（不建议，cookie一段时间就更新）
+ 2、自动处理：
+    -cookie的值的来源：模拟登录请求后，由服务器创建
+    -session会话对象的作用：
+        可以进行请求的发送
+        如果请求过程中，产生了cookie，该cookie会被自动存储。携带在session的对象中
+ 1创建session对象：session = requests.Session()
+ 2使用session进行post请求的发送
+ 3使用携带cookie的session进行get请求发送
+
+代理：破解封IP这种反爬机制
+代理服务器
+代理的作用：突破自身IP访问的限制；隐藏自身真是IP，免受攻击
+代理相关网址：
+-快代理
+-西祠代理
+-www.goubanjia.com
+代理IP的类型：
+-http:应用到http协议的url中
+-https:应用到https协议对应的url中
+    requests.get(urel=url, headers=headers, proxies={'http/https':'39.170.59.168'})
+代理ip的匿名度：
+-透明：服务器知道该次请求使用了代理，也知道请求对应的真实ip
+-匿名：服务器知道使用了代理，但不知道真实的ip
+-高匿：服务器不知道使用了代理，更不知道真实的ip
+
+get方法时阻塞的方法
+异步爬虫的方式：
+-多线程、多进程（不建议）
+    好处：可以维阻塞的方法开启多线程、多进程，异步执行
+    弊端：无法无限制的开启多线程、多进程
+-线程池、进程池（适当使用）
+    好处：降低系统对进程和线程创建和销毁的频率
+    弊端：池中线程或进程时有上限的
+    def get_info(arg):
+        requests.get(……)
+        ……
+    pool= Pool(4) # 创建线程池对象
+    ret_list = pool.map(get_info, list) # list是get_info的参数
+    pool.close()  # 关闭线程池，不在接收新的线程
+    pool.join() # 阻塞 等待池中线程都执行完
+
+-单线程+异步协程（推荐） python 3.6以上版本
+    event_loop：事件循环，相当于无限循环，把函数注册到这个事件上，当满足条件时，函数就会被循环执行
+    coroutine：协程对象，可以将协程对象注册到事件循环中，它会被事件循环调用。
+        可以使用async关键字来定义一个方法，调用时不会立即被执行，而是返回一个协程对象
+    task：任务，是对协程对象的进一步封装，包含了任务的各个状态
+    future：代表将来执行或还没有执行的任务，实际和task没区别
+    async：定义一个协程
+    await：用来挂起阻塞方法的执行
+    示例：
+    import asyncio
+    async def fun(url):
+        print('正在请求...', url)
+        print('请求完成! ', url)
+        return url
+    # async修饰的函数，调用之后返回的一个协程对象
+    coroutine = fun()
+    # 创建一个事件循环对象
+    loop = asyncio.get_loop_event()
+    # 将协程对象注册到loop循环事件中，然后启动loop
+    loop.run_until_complete(coroutine)
+
+    # task的使用
+    # 基于loop创建一个task对象
+    task = loop.create_task(coroutine)
+    print(task)
+    # 将task对象注册到loop循环事件中
+    loop.run_until_complete(task)
+    print(task)
+
+    # future的使用
+    # 创建一个future对象
+    task = asyncio.ensure_future(coroutine)
+    print(task)
+    loop.run_until_complete(task)
+    print(task)
+
+    # 绑定回调
+    def callback_fun(task):
+        # result()返回的就是任务对象中封装的协程对象对应函数的返回值
+        print(task.result())
+    loop = asyncio.get_loop_event()
+    task = asyncio.ensure_future(coroutine)
+    # 将回调函数绑定到任务对象中
+    task.add_done_callback(callback_fun)
+    loop.run_until_complete(task)
+
+    # task_list = [task1, task2, tsak3]
+    # 需要将任务列表封装到 asyncio.wait中
+    # loop.run_until_complete(asyncio.wait(task_list))
+    # 在异步协程中如果出现了同步模块相关代码, 那么就无法实现异步 例如 time.sleep() / requests.get()/post()
+    # 需要改成异步模块 asyncio.sleep() / aiohtto.ClientSession().get()/post()  [ import aiohttp 使用该模块中 ClientSession 对象]
+    # ClientSession.get()/post() 参数形式: (urel=url, headers=headers, proxies='http://ip:port')
+    # 在asyncio中遇到阻塞操作必须进行挂起 使用 await asyncio.sleep()
+    # async with aiohtto.ClientSession() as session
+    #     async with session.get(url) as response:
+    #     text() 返回字符串形式的相应数据
+    #     read() 返回的二进制形式相应数据
+    #     json() 返回就是json对象
+    #     获取相应数据之前, 要用await进行挂起
+    #     page_text = await response.text()
+
+selenium 模块的使用
+- 模块可以便捷的获取网站动态加载的数据
+- 便捷的实现模拟登录
+什么是 selenium 模块:
+    - 基于浏览器自动化的一个模块
+谷歌浏览器驱动下载: https://chromedriver.storage.googleapis.com/index.html
+from selenium import webdriver
+# 实例化一个浏览器对象(传入浏览器驱动程序)
+bro = webdriver.Chrome(executable_path='./chromedrive')
+# 让浏览器发起一个在指定url的对应请求
+bro.get(url)
+# 获取浏览器当前页面的数据
+page_text = bro.page_source
+# 解析数据
+tree = etree.HTML(page_text)
+data = tree.xpath(param)
+# 便签定位
+bro.find_element_by_id() …有很多种…
+# 标签交互
+- 搜索框中输入iphone
+search_input.send_keys('iphone')
+- 拖动滚轮 向下一个窗口高度
+bro.execute_script('window.scrollTo(0, document.body.scrollHeight)')
+- 点击搜索按钮
+btn = bro.find_element_by_css_selector('.btn-search')
+btn.click()
+- 浏览器回退 / 前进
+bro.back() / bro.forward()
+- 关闭浏览器
+bro.quit()
+
+# 如果定位的标签时存在于iframe标签种，需要通过如下操作进行标签定位
+bro.swich_to.frame('iframe_tagName') # 切换浏览器的标签定位的作用域
+div = bro.find_element_by_id(id)
+# 动作链
+from selenium.webdriver import ActionChains
+action = ActionChains(bro)
+# 点击长按指定的标签
+action.click_and_hold(div)
+# 立即执行拖动操作 move_by_offset(x, y)参数: 水平和垂直方向
+action.move_by_offset(10, 0).perform()  # 10个像素点; perform()立即执行动作链操作
+time.sleep(0.3)
+# 释放动作链
+action.release()
+
+# 无可视化界面
+from selenium.webdriver.chrome.options import Options
+chrome_options = Option()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--disable-gpu')
+bro = webdriver.Chrome(executable_path='./chromedrive',chrome_options=chrome_options)
+
+# 如何实现让 selenium 规避检测的风险
+from selenium.webdriver import ChromeOptions
+options = ChromeOptions()
+options.add_experimental_option('excludeSwitches', ['enable-automation'])
+bro = webdriver.Chrome(executable_path='./chromedrive',options=options)
+
+bro = webdriver.Chrome(executable_path='./chromedrive',chrome_options=chrome_options,options=options)
+
+# 12306网站验证码 用超级鹰在线平台
+
+# scrapy框架：一个集成了很多功能并且具有很强通用性的一个项目模块
+学习框架封装的各种功能的相信用法
+scrapy爬虫中封装好的一个明星框架
+-高性能持久化存储
+-异步数据下载
+-高性能数据解析
+-分布式
+# 环境安装
+    -mac or linux：pip install scrapy
+    -windows:
+        pip install wheel
+        下载 twisted：http://www.lfd.uci.edu/~gohlke/pythonlibs/#twisted
+        安装 twisted：pip install ……
+        pip install pywin32
+        pip install scrapy
+1 创建一个工程：
+    -scrapy startproject xxxpro
+    # cd xxxpro
+2 在spiders子目录中创建一个爬虫文件
+    -scrapy genspider spiderName www.xxx.com
+3 执行工程
+    -scrapy crawl spiderName --nolog(不打印日志)
+    -示例
+    import scrapy
+    class FirstSpider(scrapy.Spider):
+        # 爬虫文件的名称 爬虫源文件的唯一标识
+        name = 'first'
+        # 允许的域名：用来限定start_urls列表中哪些url可以进行请求的发送 ( 通常不用 )
+        # allowed_domains = ['www.xxx.com']
+        # 起始的url列表：该列表中 存放发url会被scrapy自动进行请求的发送
+        start_urls = ['http://www.xxx.com/', 'http://www.yyy.com/']
+        # 用于数据解析： response参数表示的就是请求成功后对应的相应对象
+        # 调用的次数 由start_urls列表长度决定
+        def parse(self, response):
+            pass
+    settings.py文件中修改配置：
+    - robotstxt 协议 置为 False
+    - UA伪装 开启
+    - 只打印错误信息 LOG_LEVEL = 'ERROR'
+scarpy数据解析：parse()方法
+    # xpath 返回的是列表，但是列表元素一定是 Selector 类型的对象
+    # extract() 可以将 Selector对象中的 data 参数存储的字符串提取出来
+    # 列表调用了 extract() 之后，表示将列表中每一个 Selector 对象中的 data 对应的自负床提取出来，返回的是 data 的列表
+    # xpath 返回的列表中只有一个元素时，可以用 extract_first() 可以将 Selector对象中的 data 参数存储的字符串提取出来
+scrapy持久化存储：
+    -基于终端指令：
+        -要求：只可以将parse()方法的返回值, 存储到本地文本文件中
+        -支持的文件格式：json, jsonlines, jl, csv, xml, marshal, pickle
+        -指令：scrapy crawl xxx -o filepath
+        -好处：高效便捷
+        -缺点：数据只能存储到指定文件格式，局限性强
+    -基于管道：
+        -编码流程：
+            -数据解析
+            -在items类中定义相关的属性
+                # class CdrScrapyItem(scrapy.Item):
+                #   define the fields for your item here like:
+                #   name = scrapy.Field()
+                #   pass
+            -将items类型的对象提交给管道进行持久化存储的操作
+                # def parse(self, response):
+                #   …(数据解析)…
+                #   将解析的数据封装存储在items类型对象中
+                #   item = xxxItem() [ xxx: 代表项目名 ]
+                #   item['key'] = Value
+                #   yield item  # 将item提交给管道
+            -在管道类的process_item中要将其接受到的item对象中存储的数据进行持久话存储操作
+                # class CdrScrapyPipeline:
+                # fp = None
+                # 重写父类的一个方法，该方法只在开始爬虫的时候被调用一次
+                # def open_spider(self, spider):
+                #   print('开始')
+                #   self.fp = open('./xxx.txt', 'w', encoding='utf-8')
+                # 专门用来处理item类型对象
+                # 该方法可以接收爬虫文件提交过来的item对象
+                # 该方法每接收到一个item就会被调用依次
+                # def process_item(self, item, spider):
+                #    data = item['']
+                #    self.fp.write(data)
+                #    return item
+                # def close_spider(self, spider):
+                #    print('结束')
+                #    self.fp.close()
+            -在配置文件中开启管道
+                # ITEM_PIPELINES = {
+                #   'CDR_scrapy.pipelines.CdrScrapyPipeline': 300,
+                #    # 300表示的是优先级, 数值越小优先级越高
+                # }
+        -好处:通用性强
+
+
+
+
+
